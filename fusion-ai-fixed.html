@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FUSION AI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:#252525;border-radius:4px}
+:root{
+  --claude:#D4924A;--gemini:#4FC3F7;--chatgpt:#6EC97E;
+  --bg:#070707;--s1:#0e0e0e;--border:#1c1c1c;
+}
+body{background:var(--bg);color:#ddd;font-family:'Noto Sans KR',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+@keyframes glow{0%,100%{opacity:.7}50%{opacity:1}}
+@keyframes typing{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+header{padding:18px 28px 14px;border-bottom:1px solid #131313;background:linear-gradient(180deg,#0d0d0d,#080808);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.logo{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:900;letter-spacing:5px;background:linear-gradient(90deg,#b8722a,var(--claude),#f0c070,var(--claude),#b8722a);background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite}
+.logo-sub{font-size:10px;color:#3a3a3a;letter-spacing:3px;margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+.key-btn{display:flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;cursor:pointer;background:#111;border:1px solid #2a2a2a;color:#888;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all .2s}
+.key-btn:hover{border-color:#3a3a3a;color:#aaa}
+.kd{width:6px;height:6px;border-radius:50%;transition:all .3s}
+
+.modal-overlay{position:fixed;inset:0;background:#000000bb;backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeUp .2s ease}
+.modal{background:#0f0f0f;border:1px solid #2a2a2a;border-radius:18px;width:100%;max-width:540px;margin:20px;animation:slideDown .25s ease;overflow:hidden}
+.modal-head{padding:20px 24px 16px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:15px;color:#ddd;letter-spacing:1px}
+.modal-close{width:30px;height:30px;border-radius:8px;border:1px solid #2a2a2a;background:transparent;color:#666;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{background:#1a1a1a;color:#aaa}
+.modal-body{padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+
+.key-row{display:flex;flex-direction:column;gap:6px}
+.key-row-top{display:flex;align-items:center;justify-content:space-between}
+.key-row-name{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;font-weight:700}
+.key-row-link{font-size:10px;color:#444;text-decoration:none;transition:color .2s;padding:3px 8px;border:1px solid #2a2a2a;border-radius:5px}
+.key-row-link:hover{color:#888;border-color:#3a3a3a}
+.key-input-wrap{position:relative}
+.key-input{width:100%;padding:10px 42px 10px 14px;background:#111;border-radius:10px;border:1px solid #2a2a2a;color:#ccc;font-size:12.5px;font-family:'JetBrains Mono',monospace;outline:none;transition:border-color .2s}
+.key-input:focus{border-color:#3a3a3a}
+.key-input.has-val{border-color:var(--chatgpt)55}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#444;cursor:pointer;font-size:15px;transition:color .2s;line-height:1}
+.eye-btn:hover{color:#888}
+.key-hint{font-size:10px;color:#3a3a3a;font-family:'JetBrains Mono',monospace;height:13px}
+
+.save-btn{padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--claude),#9a6228);color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.save-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+
+.info-box{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#12100a;border-radius:10px;border:1px solid var(--claude)1a}
+.info-box-text{font-size:11.5px;color:#6a5030;line-height:1.6}
+.info-box-text strong{color:var(--claude);font-family:'JetBrains Mono',monospace}
+
+/* NOTICE BANNER */
+.notice{margin:12px 28px 0;padding:10px 16px;background:#0a0f1a;border:1px solid #4FC3F722;border-radius:10px;font-size:11px;color:#446688;font-family:'JetBrains Mono',monospace;display:flex;align-items:flex-start;gap:8px;line-height:1.6}
+
+main{flex:1;padding:16px 28px;display:flex;flex-direction:column;gap:14px;max-width:960px;width:100%;margin:0 auto}
+
+.input-wrap{background:var(--s1);border-radius:14px;border:1px solid var(--border);overflow:hidden;transition:border-color .3s}
+.input-wrap:focus-within{border-color:#282828}
+textarea{width:100%;padding:16px 20px;background:transparent;border:none;color:#ddd;font-size:15px;line-height:1.7;resize:none;outline:none;font-family:'Noto Sans KR',sans-serif}
+textarea::placeholder{color:#282828}
+.input-bar{padding:10px 14px;border-top:1px solid #131313;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hint{font-size:11px;color:#2e2e2e;font-family:'JetBrains Mono',monospace}
+.hint.run{color:var(--claude);animation:pulse 1.6s infinite}
+.send-btn{padding:9px 26px;border-radius:9px;border:none;background:linear-gradient(135deg,#c4823a,#a06228);color:#fff;font-weight:700;font-size:13px;cursor:pointer;letter-spacing:.5px;transition:all .2s;font-family:'Noto Sans KR',sans-serif;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.send-btn:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.1)}
+.send-btn:disabled{background:#161616;color:#333;cursor:not-allowed;transform:none;filter:none}
+.mini-spin{width:13px;height:13px;border:2px solid #44444444;border-top-color:var(--claude);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+
+.phase-track{display:flex;align-items:center;background:var(--s1);border-radius:12px;border:1px solid var(--border);padding:13px 20px;animation:fadeUp .3s ease;overflow:hidden}
+.phase-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;padding:0 8px}
+.phase-step:not(:last-child)::after{content:'';position:absolute;right:-1px;top:50%;transform:translateY(-50%);width:1px;height:26px;background:#1a1a1a}
+.pdot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;transition:all .4s;border:2px solid #1a1a1a}
+.pdot.idle{background:#0f0f0f;color:#252525}
+.pdot.active{border-color:var(--claude);color:var(--claude);background:#1a1208;animation:glow 1.5s ease infinite}
+.pdot.done{background:var(--claude);color:#000;border-color:var(--claude)}
+.plabel{font-size:9px;color:#2a2a2a;font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap}
+.plabel.active{color:var(--claude)}.plabel.done{color:#664a28}
+
+.ai-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;animation:fadeUp .35s ease}
+.ai-card{border-radius:12px;background:var(--s1);border:1px solid var(--border);overflow:hidden;transition:border-color .4s}
+.ai-head{padding:11px 13px;border-bottom:1px solid transparent;display:flex;align-items:center;justify-content:space-between;transition:all .3s}
+.ai-icon{font-size:15px;transition:all .4s}
+.ai-name{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px}
+.ai-sub{font-size:9px;color:#333;margin-top:1px}
+.ai-st{font-size:9px;padding:3px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace;transition:all .3s;background:#0f0f0f;color:#252525;border:1px solid #181818}
+.ai-body{padding:11px 13px;min-height:50px;font-size:11px;color:#3a3a3a;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tdots{display:flex;gap:3px;padding:3px 0;align-items:center}
+.td{width:5px;height:15px;border-radius:3px;background:#252525;animation:typing 1.2s ease infinite}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+
+.fusion-wrap{border-radius:12px;padding:15px 20px;background:linear-gradient(135deg,#161008,#100c07);border:1px solid var(--claude)22;display:flex;align-items:center;gap:14px;animation:fadeUp .3s ease}
+.fusion-ring{width:34px;height:34px;flex-shrink:0;position:relative}
+.fusion-ring::before,.fusion-ring::after{content:'';position:absolute;border-radius:50%;border:2px solid transparent}
+.fusion-ring::before{inset:0;border-top-color:var(--claude);animation:spin .9s linear infinite}
+.fusion-ring::after{inset:5px;border-top-color:#D4924A55;animation:spin 1.5s linear infinite reverse}
+.ft1{color:var(--claude);font-weight:700;font-size:13px;font-family:'JetBrains Mono',monospace;letter-spacing:1px}
+.ft2{color:#503818;font-size:11px;margin-top:3px}
+
+.result-wrap{border-radius:14px;overflow:hidden;border:1px solid var(--claude)33;animation:fadeUp .4s ease}
+.result-head{padding:14px 20px;background:linear-gradient(135deg,#1c1308,#100e07);border-bottom:1px solid var(--claude)1a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.rglow{width:9px;height:9px;border-radius:50%;background:var(--claude);box-shadow:0 0 10px var(--claude),0 0 20px var(--claude)88;animation:glow 2s ease infinite;flex-shrink:0}
+.rtitle{color:var(--claude);font-family:'JetBrains Mono',monospace;font-weight:800;font-size:13px;letter-spacing:1.5px}
+.rsub{color:#503818;font-size:10px;margin-top:2px}
+.arow{display:flex;gap:6px;flex-wrap:wrap}
+.ab{padding:6px 14px;border-radius:7px;border:1px solid;font-size:11px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .2s}
+.ab:hover{filter:brightness(1.2)}
+.result-body{padding:22px 26px;color:#d0c8be;font-size:14px;line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto}
+.result-body strong{color:#e8d5b0}
+.result-body pre{background:#0f0f0f;border:1px solid #1e1e1e;border-radius:10px;padding:14px 16px;margin:10px 0;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:#b0c8a0;white-space:pre}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;gap:14px;text-align:center}
+.empty-icons{display:flex;gap:12px;align-items:center;font-size:26px}
+.empty-title{font-size:15px;color:#252525;font-family:'JetBrains Mono',monospace;letter-spacing:2px}
+.empty-desc{font-size:12px;color:#1e1e1e;line-height:1.9;max-width:380px}
+.empty-desc b{color:#3a3a3a}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:10px 20px;font-size:12px;color:#aaa;font-family:'JetBrains Mono',monospace;opacity:0;transition:all .3s;pointer-events:none;z-index:200;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:600px){.ai-grid{grid-template-columns:1fr}main{padding:12px 14px}header{padding:14px 16px}.logo{font-size:20px}.notice{margin:10px 14px 0}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">FUSION AI</div>
+    <div class="logo-sub">3 AI · 1 PERFECT ANSWER</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div style="display:flex;gap:4px;align-items:center">
+      <div class="kd" id="kd-claude" style="background:var(--claude);filter:drop-shadow(0 0 4px var(--claude))"></div>
+      <div class="kd" id="kd-gemini" style="background:#2a2a2a"></div>
+      <div class="kd" id="kd-chatgpt" style="background:#2a2a2a"></div>
+    </div>
+    <button class="key-btn" onclick="openModal()">
+      <span id="keyBtnLabel">🔑 API 키 설정</span>
+    </button>
+  </div>
+</header>
+
+<!-- HOSTING NOTICE -->
+<div class="notice" id="hostNotice">
+  ⚠️&nbsp; <span><b style="color:#6699bb">로컬 파일로 실행 시 외부 API가 차단될 수 있습니다.</b> Netlify·GitHub Pages 등에 업로드하면 모든 AI가 정상 작동합니다. <a href="https://app.netlify.com/drop" target="_blank" style="color:#4FC3F7;text-decoration:none">Netlify Drop →</a></span>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">🔑 API 키 설정</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="info-box">
+        <span style="font-size:22px">◆</span>
+        <div class="info-box-text">
+          <strong>Claude</strong> — 항상 자동 포함 · 별도 키 불필요<br/>
+          Gemini·ChatGPT 키가 없으면 Claude가 해당 관점을 시뮬레이션합니다.
+        </div>
+      </div>
+
+      <!-- Gemini -->
+      <div class="key-row">
+        <div class="key-row-top">
+          <div class="key-row-name" style="color:var(--gemini)">✦ GEMINI · Google</div>
+          <a class="key-row-link" href="https://aistudio.google.com/app/apikey" target="_blank">무료 발급 →</a>
+        </div>
+        <div class="key-input-wrap">
+          <input class="key-input" id="inp-gemini" type="password" placeholder="AIza... 형식의 API 키"
+            oninput="onKeyTyped('gemini',this)"/>
+          <button class="eye-btn" onclick="toggleEye('gemini')">👁</button>
+        </div>
+        <div class="key-hint" id="hint-gemini"></div>
+      </div>
+
+      <!-- ChatGPT -->
+      <div class="key-row">
+        <div class="key-row-top">
+          <div class="key-row-name" style="color:var(--chatgpt)">● CHATGPT · OpenAI</div>
+          <a class="key-row-link" href="https://platform.openai.com/api-keys" target="_blank">발급하기 →</a>
+        </div>
+        <div class="key-input-wrap">
+          <input class="key-input" id="inp-chatgpt" type="password" placeholder="sk-... 형식의 API 키"
+            oninput="onKeyTyped('chatgpt',this)"/>
+          <button class="eye-btn" onclick="toggleEye('chatgpt')">👁</button>
+        </div>
+        <div class="key-hint" id="hint-chatgpt"></div>
+      </div>
+
+      <button class="save-btn" onclick="saveKeys()">
+        💾 &nbsp;저장하고 닫기 — 다음에 자동으로 불러옵니다
+      </button>
+
+      <div style="text-align:center;font-size:10px;color:#252525;font-family:'JetBrains Mono',monospace;line-height:1.8">
+        키는 이 기기의 브라우저에만 저장됩니다 · 외부 서버 전송 없음<br/>
+        삭제하려면 키 입력란을 비우고 다시 저장하세요
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<main>
+
+  <div class="input-wrap">
+    <textarea id="qInput" rows="3"
+      placeholder="무엇이든 물어보세요 — 3가지 AI 관점으로 분석 후 최적 답변을 합성합니다..."
+      oninput="onQInput()"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();go()}"></textarea>
+    <div class="input-bar">
+      <span class="hint" id="hint">Enter 전송 · Shift+Enter 줄바꿈</span>
+      <button class="send-btn" id="sendBtn" disabled onclick="go()">합성 시작 ↑</button>
+    </div>
+  </div>
+
+  <div class="phase-track" id="phaseTrack" style="display:none">
+    <div class="phase-step"><div class="pdot idle" id="p1">1</div><div class="plabel" id="pl1">Claude</div></div>
+    <div class="phase-step"><div class="pdot idle" id="p2">2</div><div class="plabel" id="pl2">Gemini</div></div>
+    <div class="phase-step"><div class="pdot idle" id="p3">3</div><div class="plabel" id="pl3">ChatGPT</div></div>
+    <div class="phase-step"><div class="pdot idle" id="p4">✦</div><div class="plabel" id="pl4">FUSION</div></div>
+  </div>
+
+  <div class="ai-grid" id="aiGrid" style="display:none">
+    <div class="ai-card" id="card-claude">
+      <div class="ai-head" id="head-claude">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span class="ai-icon" id="icon-claude" style="color:var(--claude)">◆</span>
+          <div><div class="ai-name" style="color:var(--claude)">Claude</div><div class="ai-sub">논리적 · 구조적</div></div>
+        </div>
+        <div class="ai-st" id="st-claude">대기</div>
+      </div>
+      <div class="ai-body" id="body-claude">
+        <div class="tdots" id="dots-claude" style="display:none"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+        <span id="txt-claude"></span>
+      </div>
+    </div>
+    <div class="ai-card" id="card-gemini">
+      <div class="ai-head" id="head-gemini">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span class="ai-icon" id="icon-gemini" style="color:var(--gemini)">✦</span>
+          <div><div class="ai-name" style="color:var(--gemini)">Gemini</div><div class="ai-sub">창의적 · 다각적</div></div>
+        </div>
+        <div class="ai-st" id="st-gemini">대기</div>
+      </div>
+      <div class="ai-body" id="body-gemini">
+        <div class="tdots" id="dots-gemini" style="display:none"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+        <span id="txt-gemini"></span>
+      </div>
+    </div>
+    <div class="ai-card" id="card-chatgpt">
+      <div class="ai-head" id="head-chatgpt">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span class="ai-icon" id="icon-chatgpt" style="color:var(--chatgpt)">●</span>
+          <div><div class="ai-name" style="color:var(--chatgpt)">ChatGPT</div><div class="ai-sub">실용적 · 직접적</div></div>
+        </div>
+        <div class="ai-st" id="st-chatgpt">대기</div>
+      </div>
+      <div class="ai-body" id="body-chatgpt">
+        <div class="tdots" id="dots-chatgpt" style="display:none"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+        <span id="txt-chatgpt"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="fusion-wrap" id="fusionWrap" style="display:none">
+    <div class="fusion-ring"></div>
+    <div><div class="ft1">FUSION ENGINE 가동 중</div><div class="ft2">3가지 관점의 핵심을 추출하고 최적 솔루션으로 합성 중...</div></div>
+  </div>
+
+  <div class="result-wrap" id="resultWrap" style="display:none">
+    <div class="result-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="rglow"></div>
+        <div><div class="rtitle">FUSION RESULT</div><div class="rsub" id="rSub">합성 완료</div></div>
+      </div>
+      <div class="arow">
+        <button class="ab" id="codeBtn" style="display:none;background:#0d1a0d;border-color:#6EC97E44;color:var(--chatgpt)" onclick="dlCode()">↓ 코드</button>
+        <button class="ab" style="background:#14120a;border-color:var(--claude)33;color:var(--claude)" onclick="dlMd()">↓ .md</button>
+        <button class="ab" id="cpBtn" style="background:transparent;border-color:#222;color:#555" onclick="cp()">복사</button>
+        <button class="ab" style="background:transparent;border-color:#1a1a1a;color:#333" onclick="resetAll()">↺ 새 질문</button>
+      </div>
+    </div>
+    <div class="result-body" id="resultBody"></div>
+  </div>
+
+  <div class="empty" id="emptyState">
+    <div class="empty-icons">
+      <span style="color:#D4924A2a">◆</span>
+      <span style="color:#1e1e1e;font-size:18px">+</span>
+      <span style="color:#4FC3F72a">✦</span>
+      <span style="color:#1e1e1e;font-size:18px">+</span>
+      <span style="color:#6EC97E2a">●</span>
+    </div>
+    <div class="empty-title">3 AI → 1 PERFECT ANSWER</div>
+    <div class="empty-desc">
+      <b>API 키 설정</b>에서 Gemini·ChatGPT 키를 저장하면<br/>
+      다음 방문 시 자동으로 불러와 3개의 실제 AI가 답변합니다.<br/>
+      키 없이도 Claude가 3가지 관점을 시뮬레이션합니다.
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── KEY STORAGE ───────────────────────────────────────
+const STORE = 'fusionai_v2';
+const keys = { gemini: '', chatgpt: '' };
+
+function loadKeys() {
+  try {
+    const s = localStorage.getItem(STORE);
+    if (s) { const p = JSON.parse(s); keys.gemini = p.gemini||''; keys.chatgpt = p.chatgpt||''; }
+  } catch(e){}
+}
+function saveKeys() {
+  const g = document.getElementById('inp-gemini').value.trim();
+  const c = document.getElementById('inp-chatgpt').value.trim();
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ gemini: g, chatgpt: c }));
+    keys.gemini = g; keys.chatgpt = c;
+    updateDots(); closeModal();
+    showToast('✓ 저장 완료 — 다음 방문 시 자동 로드됩니다');
+  } catch(e) { showToast('❌ 저장 실패: ' + e.message); }
+}
+function updateDots() {
+  document.getElementById('kd-gemini').style.background  = keys.gemini  ? 'var(--gemini)'  : '#2a2a2a';
+  document.getElementById('kd-chatgpt').style.background = keys.chatgpt ? 'var(--chatgpt)' : '#2a2a2a';
+  if (keys.gemini)  document.getElementById('kd-gemini').style.filter  = 'drop-shadow(0 0 4px var(--gemini))';
+  if (keys.chatgpt) document.getElementById('kd-chatgpt').style.filter = 'drop-shadow(0 0 4px var(--chatgpt))';
+  const n = 1 + (keys.gemini?1:0) + (keys.chatgpt?1:0);
+  document.getElementById('keyBtnLabel').textContent = n===3 ? '✓ 3 AI 연결됨' : n===2 ? '✓ 2 AI 연결됨' : '🔑 API 키 설정';
+}
+
+// ─── MODAL ─────────────────────────────────────────────
+function openModal() {
+  document.getElementById('inp-gemini').value  = keys.gemini;
+  document.getElementById('inp-chatgpt').value = keys.chatgpt;
+  ['gemini','chatgpt'].forEach(id => {
+    const inp = document.getElementById('inp-'+id);
+    inp.classList.toggle('has-val', !!inp.value);
+    const h = document.getElementById('hint-'+id);
+    h.textContent = inp.value ? '✓ 저장된 키 있음' : '';
+    h.style.color = 'var(--chatgpt)';
+  });
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+function toggleEye(id) {
+  const inp = document.getElementById('inp-'+id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+function onKeyTyped(id, el) {
+  el.classList.toggle('has-val', !!el.value.trim());
+  const h = document.getElementById('hint-'+id);
+  h.textContent = el.value.trim() ? '저장 버튼을 눌러 기억시키세요' : '';
+  h.style.color = '#887755';
+}
+
+// ─── TOAST ─────────────────────────────────────────────
+let toastT;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ─── API CALLS ─────────────────────────────────────────
+async function callClaude(messages) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true'   // ← CORS fix
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1800, messages })
+  });
+  if (!r.ok) throw new Error(`Claude API error ${r.status}`);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.content?.[0]?.text || '';
+}
+
+async function callGemini(messages, key) {
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }) }
+  );
+  if (!r.ok) {
+    const err = await r.json().catch(()=>({}));
+    throw new Error(err.error?.message || `Gemini API error ${r.status}`);
+  }
+  const d = await r.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function callChatGPT(messages, key) {
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model: 'gpt-3.5-turbo', messages, max_tokens: 1500 })
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(()=>({}));
+    throw new Error(err.error?.message || `OpenAI API error ${r.status}`);
+  }
+  const d = await r.json();
+  return d.choices?.[0]?.message?.content || '';
+}
+
+// ─── PERSONA (simulate when no key) ────────────────────
+const PERSONA = {
+  gemini:  'Google Gemini처럼 창의적이고 다각적인 시각으로 답변하세요. 다양한 가능성과 연결고리를 탐색합니다.',
+  chatgpt: 'OpenAI ChatGPT처럼 실용적이고 직접적으로 답변하세요. 핵심을 빠르게 파악하고 실행 가능한 조언을 제공합니다.',
+};
+
+// ─── PHASE UI ──────────────────────────────────────────
+function setPhase(n) {
+  for (let i=1;i<=4;i++) {
+    const d=document.getElementById('p'+i), l=document.getElementById('pl'+i);
+    d.className = i<n?'pdot done':i===n?'pdot active':'pdot idle';
+    l.className = i<n?'plabel done':i===n?'plabel active':'plabel';
+  }
+}
+
+function setAI(id, state, txt='') {
+  const C={claude:'#D4924A',gemini:'#4FC3F7',chatgpt:'#6EC97E'}[id];
+  const card=document.getElementById('card-'+id);
+  const head=document.getElementById('head-'+id);
+  const icon=document.getElementById('icon-'+id);
+  const st=document.getElementById('st-'+id);
+  const dots=document.getElementById('dots-'+id);
+  const text=document.getElementById('txt-'+id);
+
+  if (state==='loading') {
+    card.style.borderColor=C+'33'; head.style.borderBottomColor=C+'11';
+    head.style.background=`linear-gradient(135deg,${C}0d,transparent)`;
+    icon.style.color=C; icon.style.filter=`drop-shadow(0 0 7px ${C})`; icon.style.animation='pulse 1.4s infinite';
+    st.style.cssText=`background:${C}22;color:${C};border-color:${C}44`; st.textContent='분석중...';
+    dots.style.display='flex'; for(const d of dots.children) d.style.background=C+'55';
+    text.textContent='';
+  } else {
+    icon.style.animation='none';
+    dots.style.display='none';
+    if (state==='done')  { icon.style.filter=`drop-shadow(0 0 4px ${C}77)`; st.textContent='완료'; st.style.cssText=`background:${C}11;color:${C}88;border-color:${C}22`; text.style.color='#555'; }
+    if (state==='sim')   { icon.style.filter='none'; st.textContent='시뮬'; st.style.cssText='background:#1e1a10;color:#887744;border-color:#3a3020'; text.style.color='#445'; }
+    if (state==='error') { icon.style.filter='none'; st.textContent='오류'; st.style.cssText='background:#200a0a;color:#c06060;border-color:#401010'; text.style.color='#804040'; }
+    text.textContent = txt ? txt.slice(0,110)+'…' : '';
+  }
+}
+
+// ─── MAIN ──────────────────────────────────────────────
+let result='', fileExt=null, busy=false;
+
+function onQInput() {
+  document.getElementById('sendBtn').disabled = !document.getElementById('qInput').value.trim() || busy;
+}
+
+async function go() {
+  const q = document.getElementById('qInput').value.trim();
+  if (!q || busy) return;
+  busy=true;
+  document.getElementById('sendBtn').disabled=true;
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('resultWrap').style.display='none';
+  document.getElementById('fusionWrap').style.display='none';
+  document.getElementById('phaseTrack').style.display='flex';
+  document.getElementById('aiGrid').style.display='grid';
+  ['claude','gemini','chatgpt'].forEach(id=>{
+    document.getElementById('txt-'+id).textContent='';
+    document.getElementById('dots-'+id).style.display='none';
+    document.getElementById('st-'+id).textContent='대기';
+    document.getElementById('st-'+id).style.cssText='';
+    document.getElementById('card-'+id).style.borderColor='var(--border)';
+    document.getElementById('head-'+id).style.cssText='';
+    document.getElementById('icon-'+id).style.cssText='';
+  });
+  // restore icon colors
+  document.getElementById('icon-claude').style.color='var(--claude)';
+  document.getElementById('icon-gemini').style.color='var(--gemini)';
+  document.getElementById('icon-chatgpt').style.color='var(--chatgpt)';
+
+  const hint=document.getElementById('hint');
+  const msgs=[{role:'user',content:q}];
+  const col={};
+  const realAI=[];
+
+  // ── 1. Claude ──
+  hint.textContent='◆ Claude 분석 중...'; hint.className='hint run';
+  setPhase(1); setAI('claude','loading');
+  try {
+    col.claude = await callClaude(msgs);
+    setAI('claude','done',col.claude);
+    realAI.push('Claude');
+  } catch(e) { col.claude=''; setAI('claude','error',e.message); }
+
+  // ── 2. Gemini ──
+  hint.textContent='✦ Gemini 분석 중...';
+  setPhase(2); setAI('gemini','loading');
+  try {
+    if (keys.gemini) {
+      col.gemini = await callGemini(msgs, keys.gemini);
+      setAI('gemini','done',col.gemini); realAI.push('Gemini');
+    } else {
+      col.gemini = await callClaude([{role:'user',content:PERSONA.gemini+'\n\n질문: '+q+'\n\n간결하게 300자 이내:'}]);
+      setAI('gemini','sim',col.gemini);
+    }
+  } catch(e) { col.gemini=''; setAI('gemini','error',e.message); }
+
+  // ── 3. ChatGPT ──
+  hint.textContent='● ChatGPT 분석 중...';
+  setPhase(3); setAI('chatgpt','loading');
+  try {
+    if (keys.chatgpt) {
+      col.chatgpt = await callChatGPT(msgs, keys.chatgpt);
+      setAI('chatgpt','done',col.chatgpt); realAI.push('ChatGPT');
+    } else {
+      col.chatgpt = await callClaude([{role:'user',content:PERSONA.chatgpt+'\n\n질문: '+q+'\n\n간결하게 300자 이내:'}]);
+      setAI('chatgpt','sim',col.chatgpt);
+    }
+  } catch(e) { col.chatgpt=''; setAI('chatgpt','error',e.message); }
+
+  // ── 4. Fusion ──
+  hint.textContent='✦ 최적 답변 합성 중...';
+  setPhase(4);
+  document.getElementById('fusionWrap').style.display='flex';
+
+  const prompt=`당신은 여러 AI의 관점을 통합하여 최고의 답변을 만드는 전문가입니다.
+
+사용자 질문: "${q}"
+
+[Claude 관점 — 논리적·구조적]
+${col.claude||'응답 없음'}
+
+[Gemini 관점 — 창의적·다각적]
+${col.gemini||'응답 없음'}
+
+[ChatGPT 관점 — 실용적·직접적]
+${col.chatgpt||'응답 없음'}
+
+---
+세 관점의 장점을 통합하여 완벽한 최종 답변을 작성하세요.
+
+## 【합성 분석】
+각 관점에서 채택한 핵심 인사이트 (2~3줄)
+
+## 【최종 답변】
+가장 완전하고 실용적인 답변 (코드 필요 시 완전한 코드 포함)`;
+
+  try {
+    result = await callClaude([{role:'user',content:prompt}]);
+    fileExt = detectExt(result);
+    const sub = realAI.length===3 ? 'Claude · Gemini · ChatGPT 실제 3AI 합성' : realAI.length===2 ? `${realAI.join(' · ')} 실제 + 시뮬레이션 합성` : 'Claude 3관점 합성';
+    document.getElementById('rSub').textContent = sub;
+    renderResult();
+  } catch(e) { result='합성 오류: '+e.message; renderResult(); }
+
+  document.getElementById('fusionWrap').style.display='none';
+  setPhase(5);
+  hint.textContent='✓ 완성! 새 질문을 입력하세요'; hint.className='hint';
+  document.getElementById('sendBtn').disabled=false;
+  busy=false;
+}
+
+function renderResult() {
+  document.getElementById('resultBody').innerHTML = result
+    .replace(/```(\w+)?\n?([\s\S]+?)```/g,'<pre>$2</pre>')
+    .replace(/`([^`]+)`/g,'<code style="background:#1a1a1a;padding:2px 5px;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--claude)">$1</code>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^## (.+)$/gm,'<div style="color:var(--claude);font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;letter-spacing:1px;margin:16px 0 7px;padding-bottom:5px;border-bottom:1px solid #D4924A18">$1</div>')
+    .replace(/^### (.+)$/gm,'<div style="color:#c0a070;font-weight:700;margin:10px 0 5px">$1</div>')
+    .replace(/^- (.+)$/gm,'<div style="padding-left:14px;margin:3px 0;color:#b8b0a8">· $1</div>')
+    .replace(/\n/g,'<br/>');
+
+  const cb=document.getElementById('codeBtn');
+  fileExt ? (cb.style.display='inline-block', cb.textContent=`↓ .${fileExt}`) : (cb.style.display='none');
+  document.getElementById('resultWrap').style.display='block';
+  document.getElementById('resultWrap').scrollIntoView({behavior:'smooth'});
+}
+
+function detectExt(t) {
+  if(/```(python|py)\n/i.test(t)) return 'py';
+  if(/```(javascript|js|jsx)\n/i.test(t)) return 'js';
+  if(/```html\n/i.test(t)) return 'html';
+  if(/```css\n/i.test(t)) return 'css';
+  if(/```java\n/i.test(t)) return 'java';
+  if(/```sql\n/i.test(t)) return 'sql';
+  if(/```\w*\n[\s\S]+```/.test(t)) return 'txt';
+  return null;
+}
+function extractCode(t){const m=t.match(/```(?:\w+)?\n?([\s\S]+?)```/);return m?m[1]:t;}
+function dlCode(){if(!result||!fileExt)return;dl(extractCode(result),`fusion_result.${fileExt}`);}
+function dlMd(){if(!result)return;dl(result,'fusion_result.md');}
+function dl(c,n){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/plain'}));a.download=n;a.click();}
+function cp(){
+  if(!result)return;
+  navigator.clipboard.writeText(result).then(()=>{
+    const b=document.getElementById('cpBtn');
+    b.textContent='✓ 복사됨'; b.style.color='var(--chatgpt)';
+    setTimeout(()=>{b.textContent='복사';b.style.color='#555';},2000);
+  });
+}
+function resetAll(){
+  ['resultWrap','aiGrid','phaseTrack','fusionWrap'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('emptyState').style.display='flex';
+  document.getElementById('hint').textContent='Enter 전송 · Shift+Enter 줄바꿈';
+  document.getElementById('hint').className='hint';
+  document.getElementById('qInput').value='';
+  document.getElementById('sendBtn').disabled=true;
+  result='';fileExt=null;
+}
+
+// ─── INIT ──────────────────────────────────────────────
+loadKeys();
+updateDots();
+// Hide notice if served from http/https (not file://)
+if (location.protocol !== 'file:') {
+  document.getElementById('hostNotice').style.display = 'none';
+}
+</script>
+</body>
+</html>
